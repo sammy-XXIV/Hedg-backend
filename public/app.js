@@ -33,26 +33,42 @@ const heroPayout  = document.getElementById('hero-payout');
 // ── Wallet detection ──────────────────────────────────────────────
 function detectWallets() {
   const found = [];
+  const seen  = new Set();
 
-  // Sui Wallet Standard registry (Slush, Sui Wallet by Mysten)
-  const stdWallets = window.wallets?.get?.() ?? [];
-  for (const w of stdWallets) {
-    if (w.name && w.features?.['standard:connect']) {
-      found.push({ name: w.name, adapter: w });
+  function add(name, adapter) {
+    if (!seen.has(name)) { seen.add(name); found.push({ name, adapter }); }
+  }
+
+  // 1. Wallet Standard registry (Slush, Mysten Sui Wallet, etc.)
+  //    Registered wallets live in window['@mysten/wallet-standard'] or window.wallets
+  const stdSources = [
+    window['@mysten/wallet-standard']?.wallets,
+    window.wallets?.get?.(),
+  ];
+  for (const src of stdSources) {
+    if (!src) continue;
+    const list = typeof src === 'function' ? src() : src;
+    for (const w of (list ?? [])) {
+      if (w?.name && (w.features?.['standard:connect'] || w.features?.['sui:signAndExecuteTransaction'])) {
+        add(w.name, w);
+      }
     }
   }
 
-  // Known injections
-  if (window.okxwallet?.sui)  found.push({ name: 'OKX Wallet',     adapter: window.okxwallet.sui });
-  if (window.suiWallet)       found.push({ name: 'Sui Wallet',      adapter: window.suiWallet });
-  if (window.martian?.sui)    found.push({ name: 'Martian',         adapter: window.martian.sui });
-  if (window.suiet)           found.push({ name: 'Suiet',           adapter: window.suiet });
-  if (window.slush)           found.push({ name: 'Slush',           adapter: window.slush });
-  if (window.nightly?.sui)    found.push({ name: 'Nightly',         adapter: window.nightly.sui });
+  // 2. Known direct injections
+  if (window.okxwallet?.sui)       add('OKX Wallet', window.okxwallet.sui);
+  if (window.suiWallet)            add('Sui Wallet',  window.suiWallet);
+  if (window.martian?.sui)         add('Martian',     window.martian.sui);
+  if (window.suiet)                add('Suiet',       window.suiet);
+  if (window.slush)                add('Slush',       window.slush);
+  if (window.nightly?.sui)         add('Nightly',     window.nightly.sui);
 
-  // Deduplicate by name
-  const seen = new Set();
-  return found.filter(w => seen.has(w.name) ? false : seen.add(w.name));
+  // 3. OKX fallback — sometimes exposes sui methods directly on okxwallet
+  if (!seen.has('OKX Wallet') && window.okxwallet?.signAndExecuteTransaction) {
+    add('OKX Wallet', window.okxwallet);
+  }
+
+  return found;
 }
 
 async function connectWallet(adapter) {
@@ -105,10 +121,12 @@ function showWalletModal(wallets) {
 }
 
 btnConnect.addEventListener('click', async () => {
+  // Wait a tick so async wallet registrations have time to complete
+  await new Promise(r => setTimeout(r, 80));
   const wallets = detectWallets();
 
   if (!wallets.length) {
-    alert('No Sui wallet detected.\nInstall Slush, OKX Wallet, or Sui Wallet, then refresh.');
+    alert('No Sui wallet detected.\nInstall Slush or OKX Wallet, then refresh the page.');
     return;
   }
 
