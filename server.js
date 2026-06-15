@@ -1,8 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
-import { Transaction } from '@mysten/sui/transactions';
-import { CoreClient } from '@mysten/sui/client';
+import { Transaction, Inputs } from '@mysten/sui/transactions';
 
 import {
   FULLNODE, PREDICT_SERVER, PREDICT_PACKAGE, PREDICT_OBJECT,
@@ -13,7 +12,6 @@ const app = express();
 app.use(express.json());
 app.use(express.static('public'));
 
-const suiClient = new CoreClient({ url: FULLNODE });
 const keypair = Ed25519Keypair.fromSecretKey(process.env.SECRET_KEY);
 const APP_ADDRESS = keypair.toSuiAddress();
 console.log('App wallet:', APP_ADDRESS);
@@ -42,6 +40,17 @@ async function getOwnedObjects(owner, structType) {
     null, 10,
   ]);
   return r.data || [];
+}
+
+// Returns Inputs.SharedObjectRef for shared objects, Inputs.ObjectRef for owned/immutable
+async function fetchObjectRef(objectId, mutable = true) {
+  const r = await rpc('sui_getObject', [objectId, { showOwner: true }]);
+  if (!r.data) throw new Error(`Object not found: ${objectId}`);
+  const { objectId: id, version, digest, owner } = r.data;
+  if (owner?.Shared) {
+    return Inputs.SharedObjectRef({ objectId: id, initialSharedVersion: owner.Shared.initial_shared_version, mutable });
+  }
+  return Inputs.ObjectRef({ objectId: id, version, digest });
 }
 
 // ── Indexer helper ────────────────────────────────────────────────
@@ -221,7 +230,24 @@ app.post('/api/redeem', async (req, res) => {
     const quantityBig = BigInt(Math.round(quantity * Number(DUSDC_SCALE)));
     const expiryBig   = BigInt(expiry);
 
+    // Fetch full object refs in parallel — needed for offline tx building
+    const [predictRef, managerRef, oracleRef, clockRef, gasCoins, gasPrice] = await Promise.all([
+      fetchObjectRef(PREDICT_OBJECT),
+      fetchObjectRef(managerId),
+      fetchObjectRef(oracleId),
+      fetchObjectRef(CLOCK, false),
+      getCoins(APP_ADDRESS, '0x2::sui::SUI'),
+      rpc('suix_getReferenceGasPrice').then(BigInt),
+    ]);
+
+    if (!gasCoins.length) throw new Error('App wallet has no SUI for gas');
+
     const tx = new Transaction();
+    tx.setSender(APP_ADDRESS);
+    tx.setGasPrice(gasPrice);
+    tx.setGasBudget(10_000_000n);
+    tx.setGasPayment(gasCoins.map(c => ({ objectId: c.coinObjectId, version: c.version, digest: c.digest })));
+
     const keyFn = direction === 'up' ? 'up' : 'down';
     const key = tx.moveCall({
       target: `${PREDICT_PACKAGE}::market_key::${keyFn}`,
@@ -231,20 +257,24 @@ app.post('/api/redeem', async (req, res) => {
       target: `${PREDICT_PACKAGE}::predict::redeem_permissionless`,
       typeArguments: [DUSDC_TYPE],
       arguments: [
-        tx.object(PREDICT_OBJECT),
-        tx.object(managerId),
-        tx.object(oracleId),
+        tx.object(predictRef),
+        tx.object(managerRef),
+        tx.object(oracleRef),
         key,
         tx.pure.u64(quantityBig),
-        tx.object(CLOCK),
+        tx.object(clockRef),
       ],
     });
 
-    const result = await suiClient.signAndExecuteTransaction({
-      transaction: tx,
-      signer: keypair,
-      options: { showEffects: true },
-    });
+    const bytes = await tx.build();
+    const { signature } = await keypair.signTransaction(bytes);
+
+    const result = await rpc('sui_executeTransactionBlock', [
+      Buffer.from(bytes).toString('base64'),
+      [signature],
+      { showEffects: true },
+      'WaitForLocalExecution',
+    ]);
 
     if (result.effects?.status?.status !== 'success') {
       return res.status(500).json({ error: 'Redeem failed', details: result.effects?.status });
