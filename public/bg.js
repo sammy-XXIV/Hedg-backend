@@ -266,6 +266,25 @@
   });
   canvas.addEventListener('mouseleave', () => { mouseX = null; mouseY = null; draw(); });
 
+  // Seed with Binance 1m candles so chart fills immediately
+  async function seedFromBinance() {
+    try {
+      const r = await fetch(
+        'https://api.binance.com/api/v3/klines?symbol=BTCUSDT&interval=1m&limit=60'
+      );
+      const candles = await r.json();
+      for (const c of candles) {
+        timestamps.push(Number(c[0]));   // open time
+        prices.push(parseFloat(c[4]));   // close price
+      }
+      if (prices.length > MAX_TICKS) {
+        prices.splice(0, prices.length - MAX_TICKS);
+        timestamps.splice(0, timestamps.length - MAX_TICKS);
+      }
+      draw();
+    } catch {}
+  }
+
   async function fetchPrice() {
     try {
       const r = await fetch('/api/price');
@@ -273,8 +292,8 @@
       if (d.spot && d.spot > 0) {
         prices.push(d.spot);
         timestamps.push(Date.now());
-        if (prices.length > MAX_TICKS)     { prices.shift(); }
-        if (timestamps.length > MAX_TICKS) { timestamps.shift(); }
+        if (prices.length > MAX_TICKS)     prices.shift();
+        if (timestamps.length > MAX_TICKS) timestamps.shift();
         draw();
       }
     } catch {}
@@ -282,6 +301,8 @@
 
   window.addEventListener('resize', resize);
   resize();
-  fetchPrice();
-  setInterval(fetchPrice, 15_000);
+  seedFromBinance().then(() => {
+    fetchPrice();
+    setInterval(fetchPrice, 15_000);
+  });
 })();
