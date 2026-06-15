@@ -404,12 +404,14 @@ async function buyProtection(data, levelIdx) {
       // Wallet Standard (Slush, new Sui Wallet)
       result = await wallet.features['sui:signAndExecuteTransaction'].signAndExecuteTransaction({
         transaction: tx,
+        chain: 'sui:testnet',
         options: { showEffects: true, showObjectChanges: true },
       });
     } else {
       try {
         result = await wallet.signAndExecuteTransaction({
           transaction: tx,
+          chain: 'sui:testnet',
           options: { showEffects: true, showObjectChanges: true },
         });
       } catch {
