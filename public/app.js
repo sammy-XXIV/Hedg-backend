@@ -378,15 +378,17 @@ async function loadPositions() {
       ? `<div class="pos-itm">IN THE MONEY ↓ $${currentSpot.toLocaleString()}</div>`
       : '';
 
+    const expTime = new Date(p.expiryMs).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
     return `
     <div class="position-card">
       <div>
-        <div class="pos-label">BTC ↓ below $${Number(p.strike).toLocaleString()}</div>
-        <div class="pos-sub">Paid $${p.premium.toFixed(4)} · ${new Date(p.expiryMs).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</div>
-        ${itmHtml}
+        <div class="pos-label">BTC ↓ $${Number(p.strike).toLocaleString()}</div>
+        <div class="pos-sub">Binary Put · Down${itmHtml ? ' · IN THE MONEY' : ''}</div>
       </div>
-      <div class="pos-right">
-        <div class="pos-payout">$${p.quantity.toFixed(2)}</div>
+      <div class="pos-right" style="display:contents">
+        <span class="pos-payout" style="font-family:var(--mono);font-size:12px;color:var(--danger)">$${p.premium.toFixed(2)}</span>
+        <span class="pos-payout">$${p.quantity.toFixed(2)}</span>
+        <span style="font-family:var(--mono);font-size:11px;color:var(--muted)">${expTime}</span>
         ${statusHtml}
       </div>
     </div>`;

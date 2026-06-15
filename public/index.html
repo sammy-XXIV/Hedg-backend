@@ -6,24 +6,23 @@
   <title>Hedg — Bitcoin Protection</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600;1,700&family=JetBrains+Mono:wght@300;400;500&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Syne:wght@400;600;700;800&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@300;400;500;600&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-
-  <canvas id="bg-canvas"></canvas>
 
   <!-- NAV -->
   <nav>
     <div class="logo">HEDG</div>
     <div class="nav-center">
-      <span class="nav-rule">—</span>
-      <span id="btc-price" class="nav-price">loading</span>
-      <span class="nav-rule">—</span>
+      <span class="nav-tag">BTC/USD</span>
+      <span id="btc-price" class="nav-price">—</span>
+      <span class="nav-rule">|</span>
+      <span class="nav-tag">NETWORK</span>
+      <span class="nav-sui">SUI TESTNET</span>
     </div>
-    <button id="btn-connect">Open Account</button>
+    <button id="btn-connect">Connect Wallet</button>
   </nav>
-
   <div class="nav-border-line"></div>
 
   <main>
@@ -31,54 +30,75 @@
     <!-- HERO -->
     <section class="hero">
       <div class="hero-left">
-        <p class="overline">Bitcoin Downside Protection</p>
-        <h1 class="headline">
-          Protection<br/>
-          <em>for the<br/>prepared.</em>
-        </h1>
+        <p class="overline">// BITCOIN DOWNSIDE PROTECTION</p>
+        <h1 class="headline">Hedge the drop.<br/><span class="headline-accent">Collect the payout.</span></h1>
         <p class="hero-body">
-          If Bitcoin falls to your chosen level within the next
-          15 to 60 minutes, you collect the full payout.
-          Priced live by DeepBook Predict's volatility surface.
+          Set your protection level. Pay the premium. If BTC hits your strike before expiry, you collect the full payout — settled on-chain by DeepBook Predict.
         </p>
         <div class="proof-row">
           <div class="proof-item">
             <span class="proof-label">Protocol</span>
             <span class="proof-val">DeepBook Predict</span>
           </div>
-          <div class="proof-divider">·</div>
+          <div class="proof-divider"></div>
           <div class="proof-item">
             <span class="proof-label">Network</span>
             <span class="proof-val">Sui</span>
           </div>
-          <div class="proof-divider">·</div>
+          <div class="proof-divider"></div>
           <div class="proof-item">
             <span class="proof-label">Settlement</span>
             <span class="proof-val">Oracle</span>
+          </div>
+          <div class="proof-divider"></div>
+          <div class="proof-item">
+            <span class="proof-label">Asset</span>
+            <span class="proof-val">dUSDC</span>
           </div>
         </div>
       </div>
 
       <div class="configurator">
+        <div class="cfg-header">
+          <span class="cfg-title">// ORDER ENTRY</span>
+          <span class="cfg-type">BINARY PUT</span>
+        </div>
         <div class="cfg-section-label">Protection Amount</div>
         <div class="amount-wrap">
           <span class="amt-symbol">$</span>
           <input id="inp-amount" type="number" value="100" min="1" max="10000" />
           <span class="amt-denom">dUSDC</span>
         </div>
-        <div class="cfg-section-label" style="margin-top:24px">Expiry Window</div>
+        <div class="cfg-section-label">Expiry Window</div>
         <div class="pills">
-          <button class="pill active" data-minutes="15">15 min</button>
-          <button class="pill" data-minutes="30">30 min</button>
-          <button class="pill" data-minutes="60">1 hour</button>
+          <button class="pill active" data-minutes="15">15 MIN</button>
+          <button class="pill" data-minutes="30">30 MIN</button>
+          <button class="pill" data-minutes="60">1 HOUR</button>
         </div>
-        <p class="cfg-note">Repriced with each oracle window.</p>
+        <p class="cfg-note">Priced live from DeepBook SVI volatility surface</p>
       </div>
     </section>
 
+    <!-- BTC CHART -->
+    <div class="chart-section">
+      <div class="chart-header">
+        <div class="chart-header-left">
+          <span class="chart-label">BTC / USD</span>
+          <span class="live-badge"><span class="live-dot"></span>LIVE</span>
+        </div>
+        <span class="chart-range">LAST 20 TICKS</span>
+      </div>
+      <canvas id="btc-chart"></canvas>
+      <div class="chart-footer">
+        <span id="chart-low" class="chart-stat">LOW —</span>
+        <span id="chart-high" class="chart-stat">HIGH —</span>
+        <span id="chart-change" class="chart-stat">CHANGE —</span>
+      </div>
+    </div>
+
     <!-- RULE -->
     <div class="section-rule">
-      <span class="rule-label">Live Quotes</span>
+      <span class="rule-label">LIVE QUOTES</span>
       <div class="rule-line"></div>
       <span id="quote-expiry" class="rule-expiry"></span>
     </div>
@@ -94,16 +114,23 @@
     <div id="faucet-bar" class="faucet-bar hidden">
       <div class="faucet-notice">
         <span class="faucet-em">No dUSDC balance detected.</span>
-        Request testnet funds to begin.
+        Request testnet funds to begin trading.
       </div>
-      <button id="btn-faucet">Request $500 dUSDC</button>
+      <button id="btn-faucet" class="btn-faucet">Request $500 dUSDC</button>
     </div>
 
     <!-- POSITIONS -->
     <section id="positions-section" class="hidden">
       <div class="section-rule">
-        <span class="rule-label">Your Positions</span>
+        <span class="rule-label">OPEN POSITIONS</span>
         <div class="rule-line"></div>
+      </div>
+      <div class="positions-table-header">
+        <span>STRIKE</span>
+        <span>PREMIUM</span>
+        <span>PAYOUT</span>
+        <span>EXPIRES</span>
+        <span>STATUS</span>
       </div>
       <div id="positions-list"></div>
     </section>
@@ -112,11 +139,13 @@
 
   <footer>
     <div class="footer-inner">
-      <span class="footer-brand">Hedg</span>
+      <span class="footer-brand">HEDG</span>
       <span class="footer-dot">·</span>
       <span>Sui Overflow 2026</span>
       <span class="footer-dot">·</span>
       <span>Powered by DeepBook Predict</span>
+      <span class="footer-dot">·</span>
+      <span class="footer-chain">On-chain · Permissionless · Oracle-settled</span>
     </div>
   </footer>
 
