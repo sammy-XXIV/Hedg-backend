@@ -797,6 +797,70 @@ footer {
 .footer-chain { color: var(--dim); opacity: 0.6; }
 
 /* ═══════════════════════════════════════════════════════
+   WALLET MODAL
+   ═══════════════════════════════════════════════════════ */
+
+#wallet-modal-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.7);
+  z-index: 999;
+  backdrop-filter: blur(4px);
+}
+#wallet-modal-box {
+  position: fixed;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1000;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  min-width: 280px;
+  padding: 0;
+  animation: fade-up 0.2s ease both;
+}
+#wallet-modal-title {
+  font-family: var(--bebas);
+  font-size: 14px;
+  letter-spacing: 4px;
+  color: var(--muted);
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.wallet-option {
+  display: block;
+  width: 100%;
+  font-family: var(--syne);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  padding: 16px 20px;
+  text-align: left;
+  cursor: pointer;
+  transition: background var(--transition), color var(--transition);
+}
+.wallet-option:hover {
+  background: rgba(30,111,217,0.1);
+  color: var(--accent-glow);
+}
+#wallet-modal-cancel {
+  display: block;
+  width: 100%;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 2px;
+  background: transparent;
+  border: none;
+  color: var(--dim);
+  padding: 12px 20px;
+  cursor: pointer;
+  transition: color var(--transition);
+}
+#wallet-modal-cancel:hover { color: var(--danger); }
+
+/* ═══════════════════════════════════════════════════════
    UTILITIES
    ═══════════════════════════════════════════════════════ */
 

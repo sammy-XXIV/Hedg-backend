@@ -30,25 +30,109 @@ const expiryEl    = document.getElementById('quote-expiry');
 const heroCost    = document.getElementById('hero-cost');
 const heroPayout  = document.getElementById('hero-payout');
 
-// ── Wallet ────────────────────────────────────────────────────────
-function detectWallet() {
-  return window.okxwallet?.sui || window.suiWallet || null;
+// ── Wallet detection ──────────────────────────────────────────────
+function detectWallets() {
+  const found = [];
+
+  // Sui Wallet Standard registry (Slush, Sui Wallet by Mysten)
+  const stdWallets = window.wallets?.get?.() ?? [];
+  for (const w of stdWallets) {
+    if (w.name && w.features?.['standard:connect']) {
+      found.push({ name: w.name, adapter: w });
+    }
+  }
+
+  // Known injections
+  if (window.okxwallet?.sui)  found.push({ name: 'OKX Wallet',     adapter: window.okxwallet.sui });
+  if (window.suiWallet)       found.push({ name: 'Sui Wallet',      adapter: window.suiWallet });
+  if (window.martian?.sui)    found.push({ name: 'Martian',         adapter: window.martian.sui });
+  if (window.suiet)           found.push({ name: 'Suiet',           adapter: window.suiet });
+  if (window.slush)           found.push({ name: 'Slush',           adapter: window.slush });
+  if (window.nightly?.sui)    found.push({ name: 'Nightly',         adapter: window.nightly.sui });
+
+  // Deduplicate by name
+  const seen = new Set();
+  return found.filter(w => seen.has(w.name) ? false : seen.add(w.name));
+}
+
+async function connectWallet(adapter) {
+  // Wallet Standard (Slush / new Sui Wallet)
+  if (adapter.features?.['standard:connect']) {
+    const res = await adapter.features['standard:connect'].connect();
+    const acc = res.accounts?.[0];
+    return { address: acc?.address, adapter };
+  }
+  // Legacy injection API
+  const res = await adapter.connect();
+  const addr = res?.address ?? res?.accounts?.[0]?.address ?? res?.accounts?.[0];
+  return { address: addr, adapter };
+}
+
+// Wallet picker modal
+function showWalletModal(wallets) {
+  const existing = document.getElementById('wallet-modal');
+  if (existing) existing.remove();
+
+  const modal = document.createElement('div');
+  modal.id = 'wallet-modal';
+  modal.innerHTML = `
+    <div id="wallet-modal-backdrop"></div>
+    <div id="wallet-modal-box">
+      <div id="wallet-modal-title">SELECT WALLET</div>
+      ${wallets.map((w, i) => `
+        <button class="wallet-option" data-index="${i}">${w.name}</button>
+      `).join('')}
+      <button id="wallet-modal-cancel">CANCEL</button>
+    </div>`;
+  document.body.appendChild(modal);
+
+  return new Promise((resolve) => {
+    modal.querySelectorAll('.wallet-option').forEach(btn => {
+      btn.addEventListener('click', () => {
+        modal.remove();
+        resolve(wallets[parseInt(btn.dataset.index)]);
+      });
+    });
+    document.getElementById('wallet-modal-cancel').addEventListener('click', () => {
+      modal.remove();
+      resolve(null);
+    });
+    document.getElementById('wallet-modal-backdrop').addEventListener('click', () => {
+      modal.remove();
+      resolve(null);
+    });
+  });
 }
 
 btnConnect.addEventListener('click', async () => {
-  wallet = detectWallet();
-  if (!wallet) {
-    alert('Please install OKX Wallet or a Sui wallet, then refresh.');
+  const wallets = detectWallets();
+
+  if (!wallets.length) {
+    alert('No Sui wallet detected.\nInstall Slush, OKX Wallet, or Sui Wallet, then refresh.');
     return;
   }
+
+  let chosen;
+  if (wallets.length === 1) {
+    chosen = wallets[0];
+  } else {
+    chosen = await showWalletModal(wallets);
+  }
+  if (!chosen) return;
+
   try {
-    const result = await wallet.connect();
-    address = result.address ?? result.accounts?.[0]?.address;
+    btnConnect.textContent = 'Connecting…';
+    const { address: addr, adapter } = await connectWallet(chosen.adapter);
+    if (!addr) throw new Error('No address returned');
+    wallet  = adapter;
+    address = addr;
     btnConnect.textContent = address.slice(0, 6) + '…' + address.slice(-4);
     btnConnect.classList.add('connected');
     await onWalletConnected();
   } catch (e) {
     console.error('Wallet connect error', e);
+    btnConnect.textContent = 'Connect Wallet';
+    alert('Connection failed: ' + (e?.message || 'Unknown error'));
   }
 });
 
@@ -281,18 +365,26 @@ async function buyProtection(data, levelIdx) {
       tx.transferObjects([mgr], address);
     }
 
-    // Try new wallet API, fall back to legacy
+    // Try all signing APIs in order
     let result;
-    try {
-      result = await wallet.signAndExecuteTransaction({
+    if (wallet.features?.['sui:signAndExecuteTransaction']) {
+      // Wallet Standard (Slush, new Sui Wallet)
+      result = await wallet.features['sui:signAndExecuteTransaction'].signAndExecuteTransaction({
         transaction: tx,
         options: { showEffects: true, showObjectChanges: true },
       });
-    } catch {
-      result = await wallet.signAndExecuteTransactionBlock({
-        transactionBlock: tx,
-        options: { showEffects: true, showObjectChanges: true },
-      });
+    } else {
+      try {
+        result = await wallet.signAndExecuteTransaction({
+          transaction: tx,
+          options: { showEffects: true, showObjectChanges: true },
+        });
+      } catch {
+        result = await wallet.signAndExecuteTransactionBlock({
+          transactionBlock: tx,
+          options: { showEffects: true, showObjectChanges: true },
+        });
+      }
     }
 
     if (result.effects?.status?.status !== 'success') {
