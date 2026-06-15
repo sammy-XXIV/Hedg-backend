@@ -116,6 +116,7 @@ btnConnect.addEventListener('click', async () => {
     btnConnect.textContent = 'Connect Wallet';
     btnConnect.classList.remove('connected');
     btnConnect.title = '';
+    document.getElementById('btn-copy-address')?.remove();
     faucetBar.classList.add('hidden');
     posSection.classList.add('hidden');
     return;
@@ -148,6 +149,22 @@ btnConnect.addEventListener('click', async () => {
     btnConnect.textContent = address.slice(0, 6) + '…' + address.slice(-4);
     btnConnect.classList.add('connected');
     btnConnect.title = 'Click to disconnect';
+
+    // Add copy address button next to connect button
+    let copyBtn = document.getElementById('btn-copy-address');
+    if (!copyBtn) {
+      copyBtn = document.createElement('button');
+      copyBtn.id = 'btn-copy-address';
+      copyBtn.title = 'Copy address';
+      copyBtn.textContent = '⎘';
+      btnConnect.parentNode.insertBefore(copyBtn, btnConnect.nextSibling);
+      copyBtn.addEventListener('click', async () => {
+        await navigator.clipboard.writeText(address);
+        copyBtn.textContent = '✓';
+        setTimeout(() => { copyBtn.textContent = '⎘'; }, 1500);
+      });
+    }
+
     await onWalletConnected();
   } catch (e) {
     console.error('Wallet connect error', e);

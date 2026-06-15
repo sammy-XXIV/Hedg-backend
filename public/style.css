@@ -141,6 +141,22 @@ nav {
   font-size: 9px;
   letter-spacing: 1.5px;
 }
+#btn-copy-address {
+  font-family: var(--mono);
+  font-size: 13px;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  padding: 9px 12px;
+  cursor: pointer;
+  transition: color var(--transition), border-color var(--transition);
+  margin-left: 6px;
+}
+#btn-copy-address:hover {
+  color: var(--accent-glow);
+  border-color: var(--accent);
+}
+
 #btn-connect.connected:hover {
   background: rgba(255,77,77,0.08);
   border-color: rgba(255,77,77,0.4);
