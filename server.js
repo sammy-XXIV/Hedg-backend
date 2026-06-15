@@ -140,9 +140,9 @@ app.get('/api/quote', async (req, res) => {
     // Target premium rates: find strikes that give these probabilities
     // Higher premium = higher chance of payout (closer to ATM)
     const targets = [
-      { label: 'Risky',  targetUnit: 0.25, description: '1 in 4 chance' },
-      { label: 'Likely', targetUnit: 0.10, description: '1 in 10 chance' },
-      { label: 'Safe',   targetUnit: 0.03, description: '1 in 33 chance' },
+      { label: 'Risky',  targetUnit: 0.25, description: 'High chance · ~4x payout' },
+      { label: 'Likely', targetUnit: 0.10, description: 'Medium chance · ~10x payout' },
+      { label: 'Safe',   targetUnit: 0.03, description: 'Low chance · ~33x payout' },
     ];
 
     const levels = targets.map(({ label, targetUnit, description }) => {

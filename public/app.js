@@ -155,9 +155,9 @@ function startCountdown() {
 }
 
 const TIER = {
-  Risky:  { cls: 'tier-high',   label: 'HIGH RISK' },
-  Likely: { cls: 'tier-medium', label: 'LIKELY' },
-  Safe:   { cls: 'tier-low',    label: 'CONSERVATIVE' },
+  Risky:  { cls: 'tier-high',   label: 'SAFE HEDGE' },
+  Likely: { cls: 'tier-medium', label: 'BALANCED' },
+  Safe:   { cls: 'tier-low',    label: 'MOON SHOT' },
 };
 
 function renderQuotes(data) {
