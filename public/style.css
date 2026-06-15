@@ -117,6 +117,20 @@ nav {
   letter-spacing: 1.5px;
 }
 
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.nav-balance {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--success);
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+}
+.nav-balance.hidden { display: none; }
+
 #btn-connect {
   font-family: var(--syne);
   font-size: 11px;

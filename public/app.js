@@ -117,6 +117,8 @@ btnConnect.addEventListener('click', async () => {
     btnConnect.classList.remove('connected');
     btnConnect.title = '';
     document.getElementById('btn-copy-address')?.remove();
+    const balEl = document.getElementById('nav-balance');
+    if (balEl) { balEl.textContent = ''; balEl.classList.add('hidden'); }
     faucetBar.classList.add('hidden');
     posSection.classList.add('hidden');
     return;
@@ -173,7 +175,20 @@ btnConnect.addEventListener('click', async () => {
   }
 });
 
+async function refreshBalance() {
+  if (!address) return;
+  try {
+    const r = await api('/api/balance?address=' + address);
+    const el = document.getElementById('nav-balance');
+    if (el) {
+      el.textContent = '$' + r.balance.toFixed(2) + ' dUSDC';
+      el.classList.remove('hidden');
+    }
+  } catch {}
+}
+
 async function onWalletConnected() {
+  refreshBalance();
   const r = await api('/api/manager?address=' + address);
   managerId = r.managerId;
   if (managerId) localStorage.setItem('hedg_manager_' + address, managerId);
@@ -420,6 +435,7 @@ async function buyProtection(data, levelIdx) {
     }
 
     savePosition({ oracleId: data.oracleId, expiryMs: data.expiryMs, strike: lvl.strike, direction: 'down', quantity: face, premium, managerId });
+    refreshBalance();
 
     btn.textContent = 'Position opened';
     btn.style.color = 'var(--green-lt)';
