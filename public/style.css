@@ -141,6 +141,12 @@ nav {
   font-size: 9px;
   letter-spacing: 1.5px;
 }
+#btn-connect.connected:hover {
+  background: rgba(255,77,77,0.08);
+  border-color: rgba(255,77,77,0.4);
+  color: var(--danger);
+  box-shadow: none;
+}
 
 /* ═══════════════════════════════════════════════════════
    MAIN
@@ -815,7 +821,11 @@ footer {
   border: 1px solid var(--border);
   min-width: 280px;
   padding: 0;
-  animation: fade-up 0.2s ease both;
+  animation: modal-in 0.2s ease both;
+}
+@keyframes modal-in {
+  from { opacity: 0; transform: translate(-50%, -46%); }
+  to   { opacity: 1; transform: translate(-50%, -50%); }
 }
 #wallet-modal-title {
   font-family: var(--bebas);

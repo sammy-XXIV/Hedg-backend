@@ -210,39 +210,6 @@ app.get('/api/balance', async (req, res) => {
   }
 });
 
-// ── API: dUSDC faucet ─────────────────────────────────────────────
-app.post('/api/faucet', async (req, res) => {
-  try {
-    const { address } = req.body;
-    if (!address) return res.status(400).json({ error: 'address required' });
-
-    const SEND = 500n * DUSDC_SCALE; // $500
-    const coins = await getCoins(APP_ADDRESS, DUSDC_TYPE);
-    if (!coins.length) return res.status(503).json({ error: 'App wallet has no dUSDC yet — form not approved yet' });
-
-    const total = coins.reduce((s, c) => s + BigInt(c.balance), 0n);
-    if (total < SEND) return res.status(503).json({ error: `App wallet low on dUSDC ($${Number(total)/1e6})` });
-
-    const tx = new Transaction();
-    const primary = tx.object(coins[0].coinObjectId);
-    if (coins.length > 1) tx.mergeCoins(primary, coins.slice(1).map(c => tx.object(c.coinObjectId)));
-    const [coin] = tx.splitCoins(primary, [tx.pure.u64(SEND)]);
-    tx.transferObjects([coin], tx.pure.address(address));
-
-    const result = await suiClient.signAndExecuteTransaction({
-      transaction: tx,
-      signer: keypair,
-      options: { showEffects: true },
-    });
-
-    if (result.effects?.status?.status !== 'success') {
-      return res.status(500).json({ error: 'Transfer failed' });
-    }
-    res.json({ ok: true, amount: 500, digest: result.digest });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
 
 // ── API: permissionless redeem ────────────────────────────────────
 app.post('/api/redeem', async (req, res) => {

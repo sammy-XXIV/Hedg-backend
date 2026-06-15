@@ -1,4 +1,5 @@
 import { Transaction } from 'https://esm.sh/@mysten/sui@2.17.0/transactions';
+import { getWallets } from 'https://esm.sh/@mysten/wallet-standard@0.11.4';
 
 const PREDICT_PACKAGE = '0xf5ea2b3749c65d6e56507cc35388719aadb28f9cab873696a2f8687f5c785138';
 const PREDICT_OBJECT  = '0xc8736204d12f0a7277c86388a68bf8a194b0a14c5538ad13f22cbd8e2a38028a';
@@ -22,7 +23,6 @@ const btnConnect  = document.getElementById('btn-connect');
 const btcPriceEl  = document.getElementById('btc-price');
 const quotesEl    = document.getElementById('quotes');
 const faucetBar   = document.getElementById('faucet-bar');
-const btnFaucet   = document.getElementById('btn-faucet');
 const posSection  = document.getElementById('positions-section');
 const posList     = document.getElementById('positions-list');
 const amountInput = document.getElementById('inp-amount');
@@ -39,34 +39,20 @@ function detectWallets() {
     if (!seen.has(name)) { seen.add(name); found.push({ name, adapter }); }
   }
 
-  // 1. Wallet Standard registry (Slush, Mysten Sui Wallet, etc.)
-  //    Registered wallets live in window['@mysten/wallet-standard'] or window.wallets
-  const stdSources = [
-    window['@mysten/wallet-standard']?.wallets,
-    window.wallets?.get?.(),
-  ];
-  for (const src of stdSources) {
-    if (!src) continue;
-    const list = typeof src === 'function' ? src() : src;
-    for (const w of (list ?? [])) {
-      if (w?.name && (w.features?.['standard:connect'] || w.features?.['sui:signAndExecuteTransaction'])) {
-        add(w.name, w);
-      }
+  // 1. Wallet Standard via getWallets() — detects Slush, Sui Wallet, etc.
+  try {
+    const stdWallets = getWallets().get();
+    for (const w of stdWallets) {
+      if (w?.name) add(w.name, w);
     }
-  }
+  } catch {}
 
-  // 2. Known direct injections
-  if (window.okxwallet?.sui)       add('OKX Wallet', window.okxwallet.sui);
-  if (window.suiWallet)            add('Sui Wallet',  window.suiWallet);
-  if (window.martian?.sui)         add('Martian',     window.martian.sui);
-  if (window.suiet)                add('Suiet',       window.suiet);
-  if (window.slush)                add('Slush',       window.slush);
-  if (window.nightly?.sui)         add('Nightly',     window.nightly.sui);
-
-  // 3. OKX fallback — sometimes exposes sui methods directly on okxwallet
-  if (!seen.has('OKX Wallet') && window.okxwallet?.signAndExecuteTransaction) {
-    add('OKX Wallet', window.okxwallet);
-  }
+  // 2. Known direct window injections (OKX, Martian, etc.)
+  if (window.okxwallet?.sui)  add('OKX Wallet', window.okxwallet.sui);
+  if (window.suiWallet)       add('Sui Wallet',  window.suiWallet);
+  if (window.martian?.sui)    add('Martian',     window.martian.sui);
+  if (window.suiet)           add('Suiet',       window.suiet);
+  if (window.nightly?.sui)    add('Nightly',     window.nightly.sui);
 
   return found;
 }
@@ -121,6 +107,20 @@ function showWalletModal(wallets) {
 }
 
 btnConnect.addEventListener('click', async () => {
+  // Disconnect if already connected
+  if (address) {
+    wallet  = null;
+    address = null;
+    managerId = null;
+    localStorage.removeItem('hedg_wallet');
+    btnConnect.textContent = 'Connect Wallet';
+    btnConnect.classList.remove('connected');
+    btnConnect.title = '';
+    faucetBar.classList.add('hidden');
+    posSection.classList.add('hidden');
+    return;
+  }
+
   // Wait a tick so async wallet registrations have time to complete
   await new Promise(r => setTimeout(r, 80));
   const wallets = detectWallets();
@@ -144,8 +144,10 @@ btnConnect.addEventListener('click', async () => {
     if (!addr) throw new Error('No address returned');
     wallet  = adapter;
     address = addr;
+    localStorage.setItem('hedg_wallet', chosen.name);
     btnConnect.textContent = address.slice(0, 6) + '…' + address.slice(-4);
     btnConnect.classList.add('connected');
+    btnConnect.title = 'Click to disconnect';
     await onWalletConnected();
   } catch (e) {
     console.error('Wallet connect error', e);
@@ -163,9 +165,6 @@ async function onWalletConnected() {
     if (cached) managerId = cached;
   }
 
-  const bal = await api('/api/balance?address=' + address);
-  if (bal.balance < 1) faucetBar.classList.remove('hidden');
-
   if (managerId) {
     posSection.classList.remove('hidden');
     loadPositions();
@@ -173,23 +172,6 @@ async function onWalletConnected() {
   pollPositions();
 }
 
-// ── Faucet ────────────────────────────────────────────────────────
-btnFaucet.addEventListener('click', async () => {
-  if (!address) return;
-  btnFaucet.disabled = true;
-  btnFaucet.textContent = 'Sending…';
-  try {
-    const r = await api('/api/faucet', 'POST', { address });
-    if (r.ok) {
-      faucetBar.innerHTML = `<div class="faucet-notice"><span class="faucet-em">$${r.amount} dUSDC sent.</span>Funds arriving in your wallet shortly.</div>`;
-    } else {
-      faucetBar.innerHTML = `<div class="faucet-notice"><span class="faucet-em" style="color:var(--crimson)">Transfer failed.</span>${r.error}</div>`;
-    }
-  } catch {
-    btnFaucet.disabled = false;
-    btnFaucet.textContent = 'Get $500 dUSDC →';
-  }
-});
 
 // ── Duration pills ────────────────────────────────────────────────
 document.querySelectorAll('.pill').forEach(pill => {
@@ -325,7 +307,7 @@ async function buyProtection(data, levelIdx) {
   try {
     const coinsRes = await api(`/api/balance?address=${address}`);
     if (coinsRes.balance < premium) {
-      alert(`Not enough dUSDC. You have $${coinsRes.balance.toFixed(2)}, need $${premium.toFixed(4)}.\nUse the faucet below.`);
+      alert(`Not enough dUSDC. You have $${coinsRes.balance.toFixed(2)}, need $${premium.toFixed(4)}.`);
       btn.disabled = false;
       btn.textContent = `Protect $${face.toFixed(0)} for $${premium.toFixed(2)}`;
       return;
@@ -333,7 +315,7 @@ async function buyProtection(data, levelIdx) {
 
     const suiCoins = await fetchCoins(address, DUSDC_TYPE);
     if (!suiCoins.length) {
-      alert('No dUSDC coins found. Use the faucet first.');
+      alert('No dUSDC coins found in your wallet.');
       btn.disabled = false;
       btn.textContent = `Protect $${face.toFixed(0)} for $${premium.toFixed(2)}`;
       return;
@@ -571,3 +553,23 @@ setInterval(async () => {
     if (r.spot) btcPriceEl.textContent = `BTC $${r.spot.toLocaleString()}`;
   } catch {}
 }, 15_000);
+
+// Auto-reconnect on page load
+(async () => {
+  const savedWallet = localStorage.getItem('hedg_wallet');
+  if (!savedWallet) return;
+  await new Promise(r => setTimeout(r, 300)); // wait for wallet extensions to inject
+  const wallets = detectWallets();
+  const match = wallets.find(w => w.name === savedWallet);
+  if (!match) return;
+  try {
+    const { address: addr, adapter } = await connectWallet(match.adapter);
+    if (!addr) return;
+    wallet  = adapter;
+    address = addr;
+    btnConnect.textContent = address.slice(0, 6) + '…' + address.slice(-4);
+    btnConnect.classList.add('connected');
+    btnConnect.title = 'Click to disconnect';
+    await onWalletConnected();
+  } catch {}
+})();
