@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Hedg — Bitcoin Protection</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600;1,700&family=JetBrains+Mono:wght@300;400;500&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <canvas id="bg-canvas"></canvas>
+
+  <!-- NAV -->
+  <nav>
+    <div class="logo">HEDG</div>
+    <div class="nav-center">
+      <span class="nav-rule">—</span>
+      <span id="btc-price" class="nav-price">loading</span>
+      <span class="nav-rule">—</span>
+    </div>
+    <button id="btn-connect">Open Account</button>
+  </nav>
+
+  <div class="nav-border-line"></div>
+
+  <main>
+
+    <!-- HERO -->
+    <section class="hero">
+      <div class="hero-left">
+        <p class="overline">Bitcoin Downside Protection</p>
+        <h1 class="headline">
+          Protection<br/>
+          <em>for the<br/>prepared.</em>
+        </h1>
+        <p class="hero-body">
+          If Bitcoin falls to your chosen level within the next
+          15 to 60 minutes, you collect the full payout.
+          Priced live by DeepBook Predict's volatility surface.
+        </p>
+        <div class="proof-row">
+          <div class="proof-item">
+            <span class="proof-label">Protocol</span>
+            <span class="proof-val">DeepBook Predict</span>
+          </div>
+          <div class="proof-divider">·</div>
+          <div class="proof-item">
+            <span class="proof-label">Network</span>
+            <span class="proof-val">Sui</span>
+          </div>
+          <div class="proof-divider">·</div>
+          <div class="proof-item">
+            <span class="proof-label">Settlement</span>
+            <span class="proof-val">Oracle</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="configurator">
+        <div class="cfg-section-label">Protection Amount</div>
+        <div class="amount-wrap">
+          <span class="amt-symbol">$</span>
+          <input id="inp-amount" type="number" value="100" min="1" max="10000" />
+          <span class="amt-denom">dUSDC</span>
+        </div>
+        <div class="cfg-section-label" style="margin-top:24px">Expiry Window</div>
+        <div class="pills">
+          <button class="pill active" data-minutes="15">15 min</button>
+          <button class="pill" data-minutes="30">30 min</button>
+          <button class="pill" data-minutes="60">1 hour</button>
+        </div>
+        <p class="cfg-note">Repriced with each oracle window.</p>
+      </div>
+    </section>
+
+    <!-- RULE -->
+    <div class="section-rule">
+      <span class="rule-label">Live Quotes</span>
+      <div class="rule-line"></div>
+      <span id="quote-expiry" class="rule-expiry"></span>
+    </div>
+
+    <!-- QUOTES -->
+    <section id="quotes" class="quotes-grid">
+      <div class="quote-skeleton"></div>
+      <div class="quote-skeleton"></div>
+      <div class="quote-skeleton"></div>
+    </section>
+
+    <!-- FAUCET -->
+    <div id="faucet-bar" class="faucet-bar hidden">
+      <div class="faucet-notice">
+        <span class="faucet-em">No dUSDC balance detected.</span>
+        Request testnet funds to begin.
+      </div>
+      <button id="btn-faucet">Request $500 dUSDC</button>
+    </div>
+
+    <!-- POSITIONS -->
+    <section id="positions-section" class="hidden">
+      <div class="section-rule">
+        <span class="rule-label">Your Positions</span>
+        <div class="rule-line"></div>
+      </div>
+      <div id="positions-list"></div>
+    </section>
+
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+      <span class="footer-brand">Hedg</span>
+      <span class="footer-dot">·</span>
+      <span>Sui Overflow 2026</span>
+      <span class="footer-dot">·</span>
+      <span>Powered by DeepBook Predict</span>
+    </div>
+  </footer>
+
+  <script type="module" src="app.js"></script>
+  <script src="bg.js"></script>
+</body>
+</html>
