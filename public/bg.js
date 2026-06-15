@@ -15,10 +15,32 @@
   const MAX_TICKS  = 60;
   const PAD        = { top: 16, bottom: 28, left: 8, right: 72 };
 
-  let prices     = [];
-  let timestamps = [];
-  let mouseX     = null;
-  let mouseY     = null;
+  let allPrices     = [];  // full 60-candle store
+  let allTimestamps = [];
+  let prices        = [];  // sliced view
+  let timestamps    = [];
+  let timeframe     = 15;  // minutes
+  let mouseX        = null;
+  let mouseY        = null;
+
+  // Called by app.js when pill changes
+  window.setChartTimeframe = function (minutes) {
+    timeframe = minutes;
+    applySlice();
+    draw();
+    updateRangeLabel();
+  };
+
+  function applySlice() {
+    const count = timeframe; // 1 candle per minute, so N minutes = N candles
+    prices     = allPrices.slice(-count);
+    timestamps = allTimestamps.slice(-count);
+  }
+
+  function updateRangeLabel() {
+    const el = document.getElementById('chart-range');
+    if (el) el.textContent = `LAST ${timeframe} MIN`;
+  }
 
   const lowEl    = document.getElementById('chart-low');
   const highEl   = document.getElementById('chart-high');
@@ -274,14 +296,12 @@
       );
       const candles = await r.json();
       for (const c of candles) {
-        timestamps.push(Number(c[0]));   // open time
-        prices.push(parseFloat(c[4]));   // close price
+        allTimestamps.push(Number(c[0]));
+        allPrices.push(parseFloat(c[4]));
       }
-      if (prices.length > MAX_TICKS) {
-        prices.splice(0, prices.length - MAX_TICKS);
-        timestamps.splice(0, timestamps.length - MAX_TICKS);
-      }
+      applySlice();
       draw();
+      updateRangeLabel();
     } catch {}
   }
 
@@ -290,10 +310,11 @@
       const r = await fetch('/api/price');
       const d = await r.json();
       if (d.spot && d.spot > 0) {
-        prices.push(d.spot);
-        timestamps.push(Date.now());
-        if (prices.length > MAX_TICKS)     prices.shift();
-        if (timestamps.length > MAX_TICKS) timestamps.shift();
+        allPrices.push(d.spot);
+        allTimestamps.push(Date.now());
+        if (allPrices.length > MAX_TICKS)     allPrices.shift();
+        if (allTimestamps.length > MAX_TICKS) allTimestamps.shift();
+        applySlice();
         draw();
       }
     } catch {}

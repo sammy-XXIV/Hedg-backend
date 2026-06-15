@@ -179,6 +179,7 @@ document.querySelectorAll('.pill').forEach(pill => {
     document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
     pill.classList.add('active');
     selectedDuration = parseInt(pill.dataset.minutes);
+    if (window.setChartTimeframe) window.setChartTimeframe(selectedDuration);
     loadQuotes();
   });
 });
